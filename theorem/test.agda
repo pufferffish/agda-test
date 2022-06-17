@@ -78,6 +78,28 @@ isGCDℤ (pos n) (negsuc m) = isGCD n (suc m)
 isGCDℤ (negsuc n) (pos m) = isGCD (suc n) m
 isGCDℤ (negsuc n) (negsuc m) = isGCD (suc n) (suc m)
 
+Squareℕ : ℕ → Type₀
+Squareℕ n = Σ[ k ∈ ℕ ] k * k ≡ n
+
+gcdAssoc : ∀ a b c → gcd (gcd a b) c ≡ gcd a (gcd b c)
+gcdAssoc = {!!}
+
+gcdComm : ∀ a b → gcd a b ≡ gcd b a
+gcdComm a b = isGCD→gcd≡ (symGCD (gcdIsGCD b a))
+
+gcd² : ∀ a b → gcd (a * a) (b * b) ≡ (gcd a b) * (gcd a b)
+gcd² a b = {!!}
+
+squareCoprimeLemma' : ∀ a b → Squareℕ (b * a) → gcd a b ≡ 1 → Squareℕ a
+squareCoprimeLemma' a b (m , sqrPrf) cpPrf =
+  gcd a m , sym
+    (a ≡⟨ sym (·-identityˡ a) ⟩
+    1 * a ≡⟨ cong (_* a) (sym cpPrf) ⟩
+    (gcd a b) * a ≡⟨ sym (gcd-factorʳ a b a) ⟩
+    gcd (a * a) (b * a) ≡⟨ cong (gcd (a * a)) (sym sqrPrf) ⟩
+    gcd (a * a) (m * m) ≡⟨ gcd² a m ⟩
+    gcd a m * gcd a m ∎)
+
 data PythTriple : ℤ → ℤ → ℤ → Set where
   PT : ∀ a b c {p} →
        ((a *ℤ a) +ℤ (b *ℤ b) ≡ (c *ℤ c)) →
