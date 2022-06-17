@@ -5,6 +5,7 @@ open import Cubical.Foundations.Prelude
 open import Cubical.HITs.Rationals.HITQ
 open import Cubical.Data.Fin.Base
 open import Cubical.Data.Nat renaming (_·_ to _*_)
+open import Cubical.Data.Nat.Properties
 open import Cubical.Data.Int renaming (_·_ to _*ℤ_; _+_ to _+ℤ_)
 open import Data.Unit hiding (_≤_)
 open import Cubical.Algebra.CommRing
@@ -25,35 +26,51 @@ a ^ℤ (suc n) = a *ℤ (a ^ℤ n)
 ·DistR- : (x y z : ℤ) → x *ℤ (y - z) ≡ x *ℤ y - x *ℤ z
 ·DistR- x y z =
   x *ℤ (y +ℤ (- z)) ≡⟨ ·DistR+ x y (- z) ⟩
-  (x *ℤ y) +ℤ (x *ℤ - z) ≡⟨ cong (λ z → x *ℤ y +ℤ z) (sym (-DistR· x z)) ⟩
+  (x *ℤ y) +ℤ (x *ℤ - z) ≡⟨ cong (x *ℤ y +ℤ_) (sym (-DistR· x z)) ⟩
   (x *ℤ y) - (x *ℤ z) ∎
 
-lemmaCubeDiff : (a b : ℤ) → (a +ℤ b) *ℤ (a - b) ≡ (a *ℤ a) - (b *ℤ b) 
-lemmaCubeDiff a b =
+lemmaSquareDiff : ∀ a b → (a +ℤ b) *ℤ (a - b) ≡ (a *ℤ a) - (b *ℤ b) 
+lemmaSquareDiff a b =
   (a +ℤ b) *ℤ (a - b) ≡⟨ ·DistL+ a b (a - b) ⟩
-  a *ℤ (a - b) +ℤ b *ℤ (a - b) ≡⟨ cong (λ x → a *ℤ (a - b) +ℤ x) (·DistR- b a b) ⟩
-  a *ℤ (a - b) +ℤ (b *ℤ a - b *ℤ b) ≡⟨ cong (λ x → x +ℤ (b *ℤ a - b *ℤ b)) (·DistR- a a b) ⟩
+  a *ℤ (a - b) +ℤ b *ℤ (a - b) ≡⟨ cong (a *ℤ (a - b) +ℤ_) (·DistR- b a b) ⟩
+  a *ℤ (a - b) +ℤ (b *ℤ a - b *ℤ b) ≡⟨ cong (_+ℤ (b *ℤ a - b *ℤ b)) (·DistR- a a b) ⟩
   (a *ℤ a +ℤ - (a *ℤ b)) +ℤ (b *ℤ a +ℤ - (b *ℤ b)) ≡⟨ sym (+Assoc (a *ℤ a) (- (a *ℤ b)) (b *ℤ a +ℤ - (b *ℤ b))) ⟩
-  a *ℤ a +ℤ (- (a *ℤ b) +ℤ (b *ℤ a +ℤ - (b *ℤ b))) ≡⟨ cong (λ x → a *ℤ a +ℤ x) (+Assoc (- (a *ℤ b)) (b *ℤ a) (- (b *ℤ b))) ⟩
+  a *ℤ a +ℤ (- (a *ℤ b) +ℤ (b *ℤ a +ℤ - (b *ℤ b))) ≡⟨ cong (a *ℤ a +ℤ_) (+Assoc (- (a *ℤ b)) (b *ℤ a) (- (b *ℤ b))) ⟩
   a *ℤ a +ℤ ((- (a *ℤ b) +ℤ b *ℤ a) +ℤ - (b *ℤ b)) ≡⟨ cong (λ x → a *ℤ a +ℤ ((- (a *ℤ b) +ℤ x) +ℤ - (b *ℤ b))) (·Comm b a) ⟩
   a *ℤ a +ℤ ((- (a *ℤ b) +ℤ (a *ℤ b)) +ℤ - (b *ℤ b)) ≡⟨ cong (λ x → a *ℤ a +ℤ (x +ℤ - (b *ℤ b))) (-Cancel' (a *ℤ b)) ⟩
   a *ℤ a +ℤ (0 +ℤ - (b *ℤ b)) ≡⟨ cong (λ x → a *ℤ a +ℤ x) (sym (pos0+ (- (b *ℤ b)))) ⟩
   (a *ℤ a) - (b *ℤ b) ∎
 
-posℕ- : ∀ m n → n ≤ m → pos m - pos n ≡ pos (m ∸ n)
-posℕ- zero zero prf = refl
-posℕ- zero (suc n) prf = ⊥.rec (¬-<-zero prf)
-posℕ- (suc m) zero prf =
+pos∸ : ∀ m n → n ≤ m → pos m - pos n ≡ pos (m ∸ n)
+pos∸ zero zero prf = refl
+pos∸ zero (suc n) prf = ⊥.rec (¬-<-zero prf)
+pos∸ (suc m) zero prf =
   pos (suc m) ≡⟨ pos0+ (pos (suc m)) ⟩
   (- pos zero) +ℤ pos (suc m) ≡⟨ +Comm (- pos zero) (pos (suc m)) ⟩
   pos (suc m) - pos zero ∎
-posℕ- (suc m) (suc zero) prf =
+pos∸ (suc m) (suc zero) prf =
   pos (suc m) - pos 1 ∎
-posℕ- (suc m) (suc (suc n)) prf =
+pos∸ (suc m) (suc (suc n)) prf =
   predℤ (pos (suc m) +negsuc n) ≡⟨ predℤ+negsuc n (pos (suc m)) ⟩
-  predℤ (sucℤ (pos m)) +negsuc n ≡⟨ cong (λ x → x +negsuc n) (predSuc (pos m)) ⟩
-  pos m - (pos (suc n)) ≡⟨ posℕ- m (suc n) (pred-≤-pred prf) ⟩
+  predℤ (sucℤ (pos m)) +negsuc n ≡⟨ cong (_+negsuc n) (predSuc (pos m)) ⟩
+  pos m - (pos (suc n)) ≡⟨ pos∸ m (suc n) (pred-≤-pred prf) ⟩
   pos (suc m ∸ suc (suc n)) ∎
+
+≤² : ∀ {m n} → m ≤ n → (m * m) ≤ (n * n)
+≤² {m} {n} prf =
+  ≤-trans (≤-trans (≤-·k {_} {_} {m} prf) (0 , (·-comm n m))) (≤-·k {_} {_} {n} prf)
+
+lemmaSquareDiffℕ : ∀ (a b : ℕ) → b ≤ a → (a + b) * (a ∸ b) ≡ (a * a) ∸ (b * b)
+lemmaSquareDiffℕ a b prf =
+  injPos
+    (pos ((a + b) * (a ∸ b)) ≡⟨ pos·pos (a + b) (a ∸ b) ⟩
+    pos (a + b) *ℤ pos (a ∸ b) ≡⟨ cong (_*ℤ pos (a ∸ b)) (pos+ a b) ⟩
+    (pos a +ℤ pos b) *ℤ pos (a ∸ b) ≡⟨ cong ((pos a +ℤ pos b) *ℤ_) (sym (pos∸ a b prf)) ⟩
+    (pos a +ℤ pos b) *ℤ (pos a - pos b) ≡⟨ lemmaSquareDiff (pos a) (pos b) ⟩
+    (pos a *ℤ pos a) - (pos b *ℤ pos b) ≡⟨ cong (λ x → x - (pos b *ℤ pos b)) (sym (pos·pos a a)) ⟩
+    (pos (a * a)) - (pos b *ℤ pos b) ≡⟨ cong (λ x → (pos (a * a)) - x) (sym (pos·pos b b)) ⟩
+    pos (a * a) - pos (b * b) ≡⟨ pos∸ (a * a) (b * b) (≤² prf) ⟩
+    pos ((a * a) ∸ (b * b)) ∎)
 
 isGCDℤ : ℤ → ℤ → ℕ → Type₀
 isGCDℤ (pos n) (pos m) = isGCD n m
@@ -84,7 +101,7 @@ reduceToGenerator (PT a b c prf gcd1 gcd2 aNZ bNZ) =
       sym (plusMinus (a *ℤ a) (b *ℤ b))
       ∙ sym (cong (λ x → x - a *ℤ a) (+Comm (a *ℤ a) (b *ℤ b)))
       ∙ cong (λ x → x - a *ℤ a) prf
-      ∙ sym (lemmaCubeDiff c a)
+      ∙ sym (lemmaSquareDiff c a)
     lemma2 =
       cong (λ x → con x (b *ℤ b)) lemma1
   in
