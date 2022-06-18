@@ -43,6 +43,19 @@ private
            ≡ (p *ℤ a) *ℤ ((p *ℤ a +ℤ q *ℤ b) *ℤ (p *ℤ a +ℤ q *ℤ b)) +ℤ (q *ℤ b) *ℤ ((p *ℤ a +ℤ q *ℤ b) *ℤ (p *ℤ a +ℤ q *ℤ b))
   lemma3 = solve ℤCommRing
 
+  lemma4 : ∀ r s m n → (- r) *ℤ m +ℤ (- s) *ℤ n ≡ - (r *ℤ m +ℤ s *ℤ n)
+  lemma4 = solve ℤCommRing
+
+  rearrangeSqr : ∀ {a b c} → a * b ≡ c → (a * a) * (b * b) ≡ c * c
+  rearrangeSqr {a} {b} {c} prf =
+    (a * a) * (b * b) ≡⟨ sym (·-assoc a a (b * b)) ⟩
+    a * (a * (b * b)) ≡⟨ cong (a *_) (·-assoc a b b) ⟩
+    a * ((a * b) * b) ≡⟨ cong (λ x → a * (x * b)) prf ⟩
+    a * (c * b) ≡⟨ cong (a *_) (·-comm c b) ⟩
+    a * (b * c) ≡⟨ ·-assoc a b c ⟩
+    (a * b) * c ≡⟨ cong (_* c) prf ⟩
+    c * c ∎
+
 _^ℤ_ : ℤ → ℕ → ℤ
 a ^ℤ zero = 1
 a ^ℤ (suc n) = a *ℤ (a ^ℤ n) 
@@ -113,42 +126,55 @@ gcdAssoc a b c =
 gcdComm : ∀ a b → gcd a b ≡ gcd b a
 gcdComm a b = isGCD→gcd≡ (symGCD (gcdIsGCD b a))
 
-euclidLemma : ∀ n a b → n ∣ (a * b) → isGCD n a 1 → n ∣ b 
-euclidLemma n a b n|ab (_ , d|1) =
+|bézout| : ∀ {m n} → (t : Bézout m n) → abs (Bézout.gcd t) ≡ 1 → Σ[ t' ∈ Bézout m n ] Bézout.gcd t' ≡ 1
+|bézout| {m} {n} t coprime =
   let
-    k , kn≡ab = ∣-untrunc n|ab
-    bi = bézout (pos n) (pos a)
+    g = Bézout.gcd t
+    r = Bézout.coef₁ t
+    s = Bézout.coef₂ t
+    eq = the (r *ℤ m +ℤ s *ℤ n ≡ g) (Bézout.identity t)
+  in
+    case abs→⊎ g 1 coprime return (λ _ → Σ[ t' ∈ Bézout m n ] Bézout.gcd t' ≡ 1) of
+    λ { (inl prf) → t , prf
+      ; (inr prf) → let eq' = lemma4 r s m n ∙ cong -_ (eq ∙ prf)
+                    in bezout (- r) (- s) 1 eq' (∣ m , ·Rid _ ∣₁ , ∣ n , ·Rid _ ∣₁) , refl  }
+
+coprimeToBezout : ∀ {m n} → isGCD m n 1 → Σ[ t ∈ Bézout (pos m) (pos n) ] Bézout.gcd t ≡ 1
+coprimeToBezout {m} {n} (_ , d|1) =
+  let
+    bi = bézout (pos m) (pos n)
     eq = Bézout.identity bi
     g = Bézout.gcd bi
     r = Bézout.coef₁ bi
     s = Bézout.coef₂ bi
     (gcd|ℤn , gcd|ℤa) = Bézout.isCD bi
-    gcd≡±1 = abs→⊎ g 1 (antisym∣ (d|1 (abs g) (∣→∣ℕ gcd|ℤn , ∣→∣ℕ gcd|ℤa)) (∣-oneˡ (abs g)))
+    |gcd|=1 = antisym∣ (d|1 (abs g) (∣→∣ℕ gcd|ℤn , ∣→∣ℕ gcd|ℤa)) (∣-oneˡ (abs g))
+  in |bézout| bi |gcd|=1
+
+euclidLemma : ∀ n a b → n ∣ (a * b) → isGCD n a 1 → n ∣ b 
+euclidLemma n a b n|ab coprime =
+  let
+    k , kn≡ab = ∣-untrunc n|ab
+    bi , gcd=1 = coprimeToBezout coprime
+    eq = Bézout.identity bi
+    g = Bézout.gcd bi
+    r = Bézout.coef₁ bi
+    s = Bézout.coef₂ bi
     poskn≡ab =
       pos k *ℤ pos n ≡⟨ sym (pos·pos k n) ⟩
       pos (k * n) ≡⟨ cong pos kn≡ab ⟩
       pos (a * b) ≡⟨ pos·pos a b ⟩
       pos a *ℤ pos b ∎
     k' = r *ℤ pos b +ℤ s *ℤ pos k
-    factor± =
+    factor =
       k' *ℤ pos n ≡⟨ lemma1 r s (pos b) (pos k) (pos n) ⟩
       pos b *ℤ (r *ℤ pos n) +ℤ s *ℤ (pos k *ℤ pos n) ≡⟨ cong (λ x → pos b *ℤ (r *ℤ pos n) +ℤ s *ℤ x) poskn≡ab ⟩
       pos b *ℤ (r *ℤ pos n) +ℤ s *ℤ (pos a *ℤ pos b) ≡⟨ lemma2 r s (pos a) (pos b) (pos n) ⟩
       pos b *ℤ (r *ℤ pos n +ℤ s *ℤ pos a) ≡⟨ cong (pos b *ℤ_) eq ⟩
-      pos b *ℤ g ∎
-    factor = ⊎→abs _ b (case gcd≡±1 return (λ _ → (k' *ℤ pos n ≡ pos b) ⊎ (k' *ℤ pos n ≡ - (pos b))) of
-      λ { (inl prf) → inl
-            (k' *ℤ pos n ≡⟨ factor± ⟩
-            pos b *ℤ g ≡⟨ cong (pos b *ℤ_) prf ⟩
-            pos b *ℤ 1 ≡⟨ ·Rid (pos b) ⟩
-            pos b ∎)
-        ; (inr prf) → inr
-            (k' *ℤ pos n ≡⟨ factor± ⟩
-            pos b *ℤ g ≡⟨ cong (pos b *ℤ_) prf ⟩
-            pos b *ℤ negsuc 0 ≡⟨ pos·negsuc b 0 ⟩
-            - (pos b *ℤ 1) ≡⟨ cong (-_) (·Rid (pos b)) ⟩
-            - (pos b) ∎) })
-  in ∣ abs k' , sym (abs· k' (pos n)) ∙ factor ∣₁
+      pos b *ℤ g ≡⟨ cong (pos b *ℤ_) gcd=1 ⟩
+      pos b *ℤ 1 ≡⟨ ·Rid (pos b) ⟩
+      pos b ∎
+  in ∣ abs k' , sym (abs· k' (pos n)) ∙ cong abs factor ∣₁
 
 gcd0≡0 : ∀ m n → isGCD m n 0 → (m ≡ 0) × (n ≡ 0)
 gcd0≡0 m n ((0|m , 0|n) , _) = sym (∣-zeroˡ 0|m) , sym (∣-zeroˡ 0|n)
@@ -157,20 +183,7 @@ gcd≠0 : ∀ {m n d} → isGCD m (suc n) d → ¬ (d ≡ 0)
 gcd≠0 {m} {n} {d} prf d≡0 =
   snotz (snd (gcd0≡0 m (suc n) (subst⁻ (isGCD m (suc n)) (sym d≡0) prf)))
 
-inj-·sm' : ∀ {k l n} → ¬ (k ≡ 0) → l * k ≡ n * k → l ≡ n
-inj-·sm' {k} k≠0 prf with k
-... | (suc k') = inj-·sm {_} {k'} prf
-... |  zero    = ⊥.rec (k≠0 refl)
-
-inj-sm·' : ∀ {k l n} → ¬ (k ≡ 0) → k * l ≡ k * n → l ≡ n
-inj-sm·' {k} k≠0 prf with k
-... | (suc k') = inj-sm· {k'} prf
-... |  zero    = ⊥.rec (k≠0 refl)
-
-x²≠0 : ∀ {x} → ¬ (x ≡ 0) → ¬ (x * x ≡ 0)
-x²≠0 {x} eat prf = eat (inj-sm·' eat (prf ∙ 0≡m·0 x))
-
-bézout²≡1 : ∀ {a b} → (t : Bézout a b) → Bézout.gcd t ≡ 1 → Bézout (a *ℤ a) (b *ℤ b) 
+bézout²≡1 : ∀ {a b} → (t : Bézout a b) → Bézout.gcd t ≡ 1 → Σ[ t' ∈ Bézout (a *ℤ a) (b *ℤ b) ] Bézout.gcd t' ≡ 1
 bézout²≡1 {a} {b} base coprime =
   let
     p = Bézout.coef₁ base
@@ -183,7 +196,12 @@ bézout²≡1 {a} {b} base coprime =
     eqQB = cong (qb *ℤ_) eq2 ∙ ·Rid qb
     p' = (b *ℤ p *ℤ p *ℤ q) +ℤ (a *ℤ p *ℤ p *ℤ p) +ℤ (2 *ℤ p *ℤ p *ℤ q *ℤ b)
     q' = 2 *ℤ p *ℤ q *ℤ q *ℤ a +ℤ b *ℤ q *ℤ q *ℤ q +ℤ a *ℤ p *ℤ q *ℤ q
-  in bezout p' q' 1 (lemma3 p q a b ∙ cong₂ _+ℤ_ eqAP eqQB ∙ eq) (∣ a *ℤ a , ·Rid _ ∣₁ , ∣ b *ℤ b , ·Rid _ ∣₁)
+  in bezout p' q' 1 (lemma3 p q a b ∙ cong₂ _+ℤ_ eqAP eqQB ∙ eq) (∣ a *ℤ a , ·Rid _ ∣₁ , ∣ b *ℤ b , ·Rid _ ∣₁) , refl
+
+isGCD-cancel : ∀ k {m n d} → ¬ (k ≡ 0) → isGCD (m * k) (n * k) (d * k) → isGCD m n d
+isGCD-cancel k k≠0 prf with k
+... | (suc k') = isGCD-cancelʳ k' prf
+... |  zero    = ⊥.rec (k≠0 refl)
 
 gcd² : ∀ a b → gcd (a * a) (b * b) ≡ (gcd a b) * (gcd a b)
 gcd² a 0 =
@@ -194,13 +212,28 @@ gcd² a 0 =
 gcd² a (suc b') =
   let
     b = suc b'
-    gcdAB = gcd a b
-    gcdAB2 = gcd (a * a) (b * b)
-    gcdAB²≠0 = x²≠0 (gcd≠0 (gcdIsGCD a b))
-    gcdAB2≠0 = gcd≠0 (gcdIsGCD (a * a) (b * b))
-    (gcd1|a , gcd1|b) , d|gcd1 = gcdIsGCD a b
-    (gcd2|a , gcd2|b) , d|gcd2 = gcdIsGCD (a * a) (b * b)
-  in {!!}
+    d = gcd a b
+    gcdAB = the (isGCD a b d) (gcdIsGCD a b)
+    (d|a , d|b) , cf|d = gcdAB
+    a' , a'd=a = ∣-untrunc d|a
+    b' , b'd=b = ∣-untrunc d|b
+    gcdA'B' =
+      subst⁻ (isGCD (a' * d) (b' * d)) (·-identityˡ d)
+      (subst⁻ (λ x → isGCD (a' * d) x d) b'd=b
+      (subst⁻ (λ x → isGCD x b d) a'd=a gcdAB))
+    bi , gcd=1 = coprimeToBezout (the (isGCD a' b' 1) (isGCD-cancel d (gcd≠0 gcdAB) gcdA'B'))
+    base , gcd2=1 = bézout²≡1 bi gcd=1
+
+    d' = gcd (a' * a') (b' * b')
+    (d'|a'2 , d'|b'2) , _ = the (isGCD (a' * a') (b' * b') d') (gcdIsGCD (a' * a') (b' * b'))
+    d'|a'2ℤ = subst⁻ (λ x → pos d' ∣ℤ x) (sym (pos·pos a' a')) (∣ℕ→∣ d'|a'2)
+    d'|b'2ℤ = subst⁻ (λ x → pos d' ∣ℤ x) (sym (pos·pos b' b')) (∣ℕ→∣ d'|b'2)
+    d'=1 = the (d' ≡ 1) (antisym∣ (∣→∣ℕ (gcdIsGCDℤ base d'|a'2ℤ d'|b'2ℤ)) (∣-oneˡ d'))
+    gcdA'B'2 = subst⁻ (isGCD (a' * a') (b' * b')) (sym d'=1) (gcdIsGCD (a' * a') (b' * b'))
+  in isGCD→gcd≡
+     (subst⁻ (isGCD (a * a) (b * b)) (sym (·-identityˡ (d * d)))
+     (subst⁻ (λ x → isGCD (a * a) x (1 * (d * d))) (sym (rearrangeSqr {b'} {d} b'd=b))
+     (subst⁻ (λ x → isGCD x ((b' * b') * (d * d)) (1 * (d * d))) (sym (rearrangeSqr {a'} {d} a'd=a)) (isGCD-multʳ (d * d) gcdA'B'2))))
 
 squareCoprimeLemma' : ∀ a b → Squareℕ (b * a) → gcd a b ≡ 1 → Squareℕ a
 squareCoprimeLemma' a b (m , sqrPrf) cpPrf =
