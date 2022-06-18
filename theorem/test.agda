@@ -1,6 +1,7 @@
 {-# OPTIONS --cubical --safe #-}
 
 open import Cubical.Core.Everything
+open import Cubical.Foundations.Function 
 open import Cubical.Foundations.Prelude
 open import Cubical.HITs.Rationals.HITQ
 open import Cubical.Data.Fin.Base
@@ -12,6 +13,7 @@ open import Cubical.Algebra.CommRing
 open import Cubical.Algebra.CommRing.Instances.Int
 open import Cubical.Relation.Nullary.Base
 open import Cubical.Algebra.CommRing.Properties
+open import Cubical.Data.Sum
 open import Cubical.Data.Nat.GCD
 open import Cubical.Data.Nat.Order
 open import Cubical.Data.Nat.Divisibility
@@ -124,7 +126,7 @@ rearrange²* a b c =
   b *ℤ (c *ℤ a) ∎
 
 euclidLemma : ∀ n a b → n ∣ (a * b) → isGCD n a 1 → n ∣ b 
-euclidLemma n a b n|ab cpPrf =
+euclidLemma n a b n|ab (_ , d|1) =
   let
     k , kn≡ab = ∣-untrunc n|ab
     bi = bézout (pos n) (pos a)
@@ -132,13 +134,14 @@ euclidLemma n a b n|ab cpPrf =
     g = Bézout.gcd bi
     r = Bézout.coef₁ bi
     s = Bézout.coef₂ bi
-    (gcd|n , gcd|a) = Bézout.isCD bi
+    (gcd|ℤn , gcd|ℤa) = Bézout.isCD bi
+    gcd≡±1 = abs→⊎ g 1 (antisym∣ (d|1 (abs g) (∣→∣ℕ gcd|ℤn , ∣→∣ℕ gcd|ℤa)) (∣-oneˡ (abs g)))
     poskn≡ab =
       pos k *ℤ pos n ≡⟨ sym (pos·pos k n) ⟩
       pos (k * n) ≡⟨ cong pos kn≡ab ⟩
       pos (a * b) ≡⟨ pos·pos a b ⟩
       pos a *ℤ pos b ∎
-    factor =
+    factor± =
       (r *ℤ pos b +ℤ s *ℤ pos k) *ℤ pos n ≡⟨ ·Comm (r *ℤ pos b +ℤ s *ℤ pos k) (pos n) ⟩
       pos n *ℤ (r *ℤ pos b +ℤ s *ℤ pos k) ≡⟨ ·DistR+ (pos n) (r *ℤ pos b) (s *ℤ pos k) ⟩
       pos n *ℤ (r *ℤ pos b) +ℤ pos n *ℤ (s *ℤ pos k) ≡⟨ cong (_+ℤ pos n *ℤ (s *ℤ pos k)) (rearrange¹* (pos n) r (pos b)) ⟩
@@ -148,11 +151,28 @@ euclidLemma n a b n|ab cpPrf =
       pos b *ℤ (r *ℤ pos n) +ℤ pos b *ℤ (pos a *ℤ s) ≡⟨ cong (λ x → pos b *ℤ (r *ℤ pos n) +ℤ pos b *ℤ x) (·Comm (pos a) s) ⟩
       pos b *ℤ (r *ℤ pos n) +ℤ pos b *ℤ (s *ℤ pos a) ≡⟨ sym (·DistR+ (pos b) (r *ℤ (pos n)) (s *ℤ (pos a))) ⟩
       pos b *ℤ (r *ℤ pos n +ℤ s *ℤ pos a) ≡⟨ cong (pos b *ℤ_) eq ⟩
-      pos b *ℤ g ≡⟨ {!!} ⟩
-      pos b *ℤ 1 ≡⟨ ·Rid (pos b) ⟩
-      pos b ∎
-    n|b = ∣→∣ℕ (∣ (r *ℤ pos b +ℤ s *ℤ pos k) , factor ∣₁)
-  in n|b
+      pos b *ℤ g ∎
+    k' = r *ℤ pos b +ℤ s *ℤ pos k
+    factor = ⊎→abs _ b (case gcd≡±1 return (λ _ → (k' *ℤ pos n ≡ pos b) ⊎ (k' *ℤ pos n ≡ - (pos b))) of
+      λ { (inl prf) →
+          let
+            p =
+              k' *ℤ pos n ≡⟨ factor± ⟩
+              pos b *ℤ g ≡⟨ cong (pos b *ℤ_) prf ⟩
+              pos b *ℤ 1 ≡⟨ ·Rid (pos b) ⟩
+              pos b ∎
+           in inl p
+        ; (inr prf) →
+          let
+            p =
+              k' *ℤ pos n ≡⟨ factor± ⟩
+              pos b *ℤ g ≡⟨ cong (pos b *ℤ_) prf ⟩
+              pos b *ℤ negsuc 0 ≡⟨ pos·negsuc b 0 ⟩
+              - (pos b *ℤ 1) ≡⟨ cong (-_) (·Rid (pos b)) ⟩
+              - (pos b) ∎
+           in inr p
+        })
+  in ∣ abs k' , sym (abs· k' (pos n)) ∙ factor ∣₁
 
 gcd² : ∀ a b → gcd (a * a) (b * b) ≡ (gcd a b) * (gcd a b)
 gcd² a b = {!!}
