@@ -14,6 +14,7 @@ open import Cubical.Relation.Nullary.Base
 open import Cubical.Algebra.CommRing.Properties
 open import Cubical.Data.Nat.GCD
 open import Cubical.Data.Nat.Order
+open import Cubical.Data.Nat.Divisibility
 open import Cubical.Data.Sigma.Base
 open import Cubical.Data.Empty as ⊥
 
@@ -82,7 +83,24 @@ Squareℕ : ℕ → Type₀
 Squareℕ n = Σ[ k ∈ ℕ ] k * k ≡ n
 
 gcdAssoc : ∀ a b c → gcd (gcd a b) c ≡ gcd a (gcd b c)
-gcdAssoc = {!!}
+gcdAssoc a b c =
+  let
+    (gbc|b , gbc|c) , d|gbc = gcdIsGCD b c
+    (gab|a , gab|b) , d|gab = gcdIsGCD a b
+
+    (f|gab , f|c) , d|f = gcdIsGCD (gcd a b) c
+    (e|a , e|gbc) , d|e = gcdIsGCD a (gcd b c)
+
+    e|b = ∣-trans e|gbc gbc|b
+    e|c = ∣-trans e|gbc gbc|c
+    e|gab = d|gab (gcd a (gcd b c)) (e|a , e|b)
+    e|f = d|f (gcd a (gcd b c)) (e|gab , e|c)
+
+    f|a = ∣-trans f|gab gab|a
+    f|b = ∣-trans f|gab gab|b
+    f|gbc = d|gbc (gcd (gcd a b) c) (f|b , f|c)
+    f|e = d|e (gcd (gcd a b) c) (f|a , f|gbc)
+  in antisym∣ f|e e|f
 
 gcdComm : ∀ a b → gcd a b ≡ gcd b a
 gcdComm a b = isGCD→gcd≡ (symGCD (gcdIsGCD b a))
