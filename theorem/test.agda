@@ -17,6 +17,9 @@ open import Cubical.Data.Nat.Order
 open import Cubical.Data.Nat.Divisibility
 open import Cubical.Data.Sigma.Base
 open import Cubical.Data.Empty as ⊥
+open import Cubical.HITs.PropositionalTruncation
+open import Cubical.Data.Int.Divisibility
+  renaming (_∣_ to _∣ℤ_; gcdIsGCD to gcdIsGCDℤ; ∣-trans to ∣-transℤ)
 
 module theorem.test where
 
@@ -104,6 +107,52 @@ gcdAssoc a b c =
 
 gcdComm : ∀ a b → gcd a b ≡ gcd b a
 gcdComm a b = isGCD→gcd≡ (symGCD (gcdIsGCD b a))
+
+rearrange¹* : ∀ a b c → a *ℤ (b *ℤ c) ≡ c *ℤ (b *ℤ a)
+rearrange¹* a b c =
+  a *ℤ (b *ℤ c) ≡⟨ cong (a *ℤ_) (·Comm b c) ⟩
+  a *ℤ (c *ℤ b) ≡⟨ ·Comm a (c *ℤ b) ⟩
+  (c *ℤ b) *ℤ a ≡⟨ sym (·Assoc c b a) ⟩
+  c *ℤ (b *ℤ a) ∎
+
+rearrange²* : ∀ a b c → a *ℤ (b *ℤ c) ≡ b *ℤ (c *ℤ a)
+rearrange²* a b c =
+  a *ℤ (b *ℤ c) ≡⟨ cong (a *ℤ_) (·Comm b c) ⟩
+  a *ℤ (c *ℤ b) ≡⟨ ·Assoc a c b ⟩
+  (a *ℤ c) *ℤ b ≡⟨ cong (_*ℤ b) (·Comm a c) ⟩
+  (c *ℤ a) *ℤ b ≡⟨ ·Comm (c *ℤ a) b ⟩
+  b *ℤ (c *ℤ a) ∎
+
+euclidLemma : ∀ n a b → n ∣ (a * b) → isGCD n a 1 → n ∣ b 
+euclidLemma n a b n|ab cpPrf =
+  let
+    k , kn≡ab = ∣-untrunc n|ab
+    bi = bézout (pos n) (pos a)
+    eq = Bézout.identity bi
+    g = Bézout.gcd bi
+    r = Bézout.coef₁ bi
+    s = Bézout.coef₂ bi
+    (gcd|n , gcd|a) = Bézout.isCD bi
+    poskn≡ab =
+      pos k *ℤ pos n ≡⟨ sym (pos·pos k n) ⟩
+      pos (k * n) ≡⟨ cong pos kn≡ab ⟩
+      pos (a * b) ≡⟨ pos·pos a b ⟩
+      pos a *ℤ pos b ∎
+    factor =
+      (r *ℤ pos b +ℤ s *ℤ pos k) *ℤ pos n ≡⟨ ·Comm (r *ℤ pos b +ℤ s *ℤ pos k) (pos n) ⟩
+      pos n *ℤ (r *ℤ pos b +ℤ s *ℤ pos k) ≡⟨ ·DistR+ (pos n) (r *ℤ pos b) (s *ℤ pos k) ⟩
+      pos n *ℤ (r *ℤ pos b) +ℤ pos n *ℤ (s *ℤ pos k) ≡⟨ cong (_+ℤ pos n *ℤ (s *ℤ pos k)) (rearrange¹* (pos n) r (pos b)) ⟩
+      pos b *ℤ (r *ℤ pos n) +ℤ pos n *ℤ (s *ℤ pos k) ≡⟨ cong (pos b *ℤ (r *ℤ pos n) +ℤ_) (rearrange²* (pos n) s (pos k)) ⟩
+      pos b *ℤ (r *ℤ pos n) +ℤ s *ℤ (pos k *ℤ pos n) ≡⟨ cong (λ x → pos b *ℤ (r *ℤ pos n) +ℤ s *ℤ x) poskn≡ab ⟩
+      pos b *ℤ (r *ℤ pos n) +ℤ s *ℤ (pos a *ℤ pos b) ≡⟨ cong (pos b *ℤ (r *ℤ pos n) +ℤ_) (rearrange¹* s (pos a) (pos b)) ⟩
+      pos b *ℤ (r *ℤ pos n) +ℤ pos b *ℤ (pos a *ℤ s) ≡⟨ cong (λ x → pos b *ℤ (r *ℤ pos n) +ℤ pos b *ℤ x) (·Comm (pos a) s) ⟩
+      pos b *ℤ (r *ℤ pos n) +ℤ pos b *ℤ (s *ℤ pos a) ≡⟨ sym (·DistR+ (pos b) (r *ℤ (pos n)) (s *ℤ (pos a))) ⟩
+      pos b *ℤ (r *ℤ pos n +ℤ s *ℤ pos a) ≡⟨ cong (pos b *ℤ_) eq ⟩
+      pos b *ℤ g ≡⟨ {!!} ⟩
+      pos b *ℤ 1 ≡⟨ ·Rid (pos b) ⟩
+      pos b ∎
+    n|b = ∣→∣ℕ (∣ (r *ℤ pos b +ℤ s *ℤ pos k) , factor ∣₁)
+  in n|b
 
 gcd² : ∀ a b → gcd (a * a) (b * b) ≡ (gcd a b) * (gcd a b)
 gcd² a b = {!!}
