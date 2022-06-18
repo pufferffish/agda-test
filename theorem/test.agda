@@ -31,18 +31,21 @@ module theorem.test where
 the : ∀ {ℓ} → (A : Type ℓ) → A → A
 the _ x = x
 
-lemma1 : ∀ r s b k n → (r *ℤ b +ℤ s *ℤ k) *ℤ n ≡ b *ℤ (r *ℤ n) +ℤ s *ℤ (k *ℤ n)
-lemma1 = solve ℤCommRing
+private
+  lemma1 : ∀ r s b k n → (r *ℤ b +ℤ s *ℤ k) *ℤ n ≡ b *ℤ (r *ℤ n) +ℤ s *ℤ (k *ℤ n)
+  lemma1 = solve ℤCommRing
+  
+  lemma2 : ∀ r s a b n → b *ℤ (r *ℤ n) +ℤ s *ℤ (a *ℤ b) ≡ b *ℤ (r *ℤ n +ℤ s *ℤ a)
+  lemma2 = solve ℤCommRing
 
-lemma2 : ∀ r s a b n → b *ℤ (r *ℤ n) +ℤ s *ℤ (a *ℤ b) ≡ b *ℤ (r *ℤ n +ℤ s *ℤ a)
-lemma2 = solve ℤCommRing
+  lemma3 : ∀ p q a b → 
+           ((b *ℤ p *ℤ p *ℤ q) +ℤ (a *ℤ p *ℤ p *ℤ p) +ℤ (2 *ℤ p *ℤ p *ℤ q *ℤ b)) *ℤ (a *ℤ a) +ℤ (2 *ℤ p *ℤ q *ℤ q *ℤ a +ℤ b *ℤ q *ℤ q *ℤ q +ℤ a *ℤ p *ℤ q *ℤ q) *ℤ (b *ℤ b)
+           ≡ (p *ℤ a) *ℤ ((p *ℤ a +ℤ q *ℤ b) *ℤ (p *ℤ a +ℤ q *ℤ b)) +ℤ (q *ℤ b) *ℤ ((p *ℤ a +ℤ q *ℤ b) *ℤ (p *ℤ a +ℤ q *ℤ b))
+  lemma3 = solve ℤCommRing
 
 _^ℤ_ : ℤ → ℕ → ℤ
 a ^ℤ zero = 1
 a ^ℤ (suc n) = a *ℤ (a ^ℤ n) 
-
-·DistR- : (x y z : ℤ) → x *ℤ (y - z) ≡ x *ℤ y - x *ℤ z
-·DistR- = solve ℤCommRing
 
 lemmaSquareDiff : ∀ a b → (a +ℤ b) *ℤ (a - b) ≡ (a *ℤ a) - (b *ℤ b) 
 lemmaSquareDiff = solve ℤCommRing
@@ -167,8 +170,20 @@ inj-sm·' {k} k≠0 prf with k
 x²≠0 : ∀ {x} → ¬ (x ≡ 0) → ¬ (x * x ≡ 0)
 x²≠0 {x} eat prf = eat (inj-sm·' eat (prf ∙ 0≡m·0 x))
 
-gcd²≡1 : ∀ a b → gcd a b ≡ 1 → gcd (a * a) (b * b) ≡ (gcd a b) * (gcd a b)
-gcd²≡1 a b coprime = {!!}
+bézout²≡1 : ∀ {a b} → (t : Bézout a b) → Bézout.gcd t ≡ 1 → Bézout (a *ℤ a) (b *ℤ b) 
+bézout²≡1 {a} {b} base coprime =
+  let
+    p = Bézout.coef₁ base
+    q = Bézout.coef₂ base
+    pa = p *ℤ a
+    qb = q *ℤ b
+    eq = Bézout.identity base ∙ coprime
+    eq2 = cong₂ _*ℤ_ eq eq
+    eqAP = cong (pa *ℤ_) eq2 ∙ ·Rid pa
+    eqQB = cong (qb *ℤ_) eq2 ∙ ·Rid qb
+    p' = (b *ℤ p *ℤ p *ℤ q) +ℤ (a *ℤ p *ℤ p *ℤ p) +ℤ (2 *ℤ p *ℤ p *ℤ q *ℤ b)
+    q' = 2 *ℤ p *ℤ q *ℤ q *ℤ a +ℤ b *ℤ q *ℤ q *ℤ q +ℤ a *ℤ p *ℤ q *ℤ q
+  in bezout p' q' 1 (lemma3 p q a b ∙ cong₂ _+ℤ_ eqAP eqQB ∙ eq) (∣ a *ℤ a , ·Rid _ ∣₁ , ∣ b *ℤ b , ·Rid _ ∣₁)
 
 gcd² : ∀ a b → gcd (a * a) (b * b) ≡ (gcd a b) * (gcd a b)
 gcd² a 0 =
