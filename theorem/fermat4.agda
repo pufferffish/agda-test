@@ -12,10 +12,11 @@ open import Cubical.Relation.Nullary
 open import Cubical.Data.Empty as ⊥
 open import Cubical.Foundations.Function
 open import Cubical.Data.Sigma
+open import Cubical.Foundations.Transport
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Int.MoreInts.QuoInt as Z'
   using (ℤ→Int; Int→ℤ)
-  renaming (_+_ to _+Z'_)
+  renaming (_+_ to _+Z'_; _·_ to _*Z'_)
 open import theorem.lemmas
 
 module theorem.fermat4 where
@@ -34,7 +35,13 @@ to+1 zero prf = ⊥.rec (prf refl)
 private
   lemmaQ1 : ∀ a → (prf : ¬ (a ≡ 0)) → [ Int→ℤ (pos a) / to+1 a prf ] ≡ 1
   lemmaQ1 zero prf = ⊥.rec (prf refl)
-  lemmaQ1 (suc a) prf = {!!}
+  lemmaQ1 (suc a) prf =
+    let
+      c = to+1 (suc a) prf
+    in
+      (subst⁻ (λ x → [ Int→ℤ (pos (suc a)) / c ] ≡ [ x *Z' 1 / c ·₊₁ 1 ]) (the (Int→ℤ (pos (suc a)) ≡ ℕ₊₁→ℤ c) refl)
+      (subst⁻ (λ x → [ Int→ℤ (pos (suc a)) / c ] ≡ [ (Int→ℤ (pos (suc a))) *Z' 1 / x ]) (·₊₁-identityʳ (to+1 (suc a) prf))
+      (subst⁻ (λ x → [ Int→ℤ (pos (suc a)) / c ] ≡ [ x / c ]) (Z'.·-identityʳ (Int→ℤ (pos (suc a)))) refl))) ∙ (ℚ-cancelˡ c)
 
 PythTripleGen : ℕ → ℕ → ℕ → ℕ × ℕ → Type₀
 PythTripleGen a b c (m , n) =
@@ -49,17 +56,18 @@ reduceToGenerator (PT a b c prf gcd1 gcd2 aNZ bNZ) =
       pos (a * a) +Z pos (b * b) ≡⟨ sym (pos+ (a * a) (b * b)) ⟩
       pos (a * a + b * b) ≡⟨ cong pos prf ⟩
       _ ∎
-    lemma2 = -- (b ^ 2) = (c + a)(c - a)
-      pos·pos b b
+    bb = to+1 (b * b) (x²≠0 bNZ)
+    lemma2 =
+      the (1 ≡ [ Int→ℤ ((pos c +Z pos a) *Z (pos c - pos a)) / bb ])
+      (sym (lemmaQ1 (b * b) (x²≠0 bNZ)) ∙ cong (λ x → [ Int→ℤ x / bb ])
+      (pos·pos b b
       ∙ sym (plusMinus (pos a *Z pos a) (pos b *Z pos b))
       ∙ sym (cong (_- pos a *Z pos a) (+Comm (pos a *Z pos a) (pos b *Z pos b)))
       ∙ cong (_- pos a *Z pos a) lemma1
       ∙ cong (_- pos a *Z pos a) (pos·pos c c)
-      ∙ sym (lemmaSquareDiff (pos c) (pos a))
-    bb = to+1 (b * b) (x²≠0 bNZ)
-    lemma3 = cong (λ x → [ Int→ℤ x / bb ]) lemma2
+      ∙ sym (lemmaSquareDiff (pos c) (pos a))))
     test =
-      [ Int→ℤ ((pos c +Z pos a) *Z (pos c - pos a)) / bb  ] ≡⟨⟩
+      [ Int→ℤ ((pos c +Z pos a) *Z (pos c - pos a)) / bb ] ≡⟨⟩
       {!!}
   in
     {!!}
