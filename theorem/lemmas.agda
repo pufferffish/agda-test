@@ -3,8 +3,6 @@
 open import Cubical.Core.Everything
 open import Cubical.Foundations.Function 
 open import Cubical.Foundations.Prelude
-open import Cubical.HITs.Rationals.QuoQ.Base
--- open import Cubical.HITs.Rationals.QuoQ.Properties as ℚ
 open import Cubical.Data.Fin.Base
 open import Cubical.Data.Nat renaming (_·_ to _*_)
 open import Cubical.Data.Nat.Properties
@@ -14,15 +12,14 @@ open import Cubical.Foundations.Transport
 open import Cubical.Algebra.CommRing
 open import Cubical.Algebra.CommRing.Instances.Int
 open import Cubical.Algebra.CommRingSolver.Reflection
-open import Cubical.Relation.Nullary.Base
+open import Cubical.Relation.Nullary
 open import Cubical.Algebra.CommRing.Properties
 open import Cubical.Data.Sum
-open import Cubical.Data.Nat.GCD
 open import Cubical.Data.Nat.GCD
 open import Cubical.Data.Nat.Order
 open import Cubical.Data.Nat.Divisibility
 open import Cubical.Data.NatPlusOne
-open import Cubical.Data.Sigma.Base
+open import Cubical.Data.Sigma
 open import Cubical.Data.Empty as ⊥
 open import Cubical.HITs.PropositionalTruncation
 open import Cubical.Data.Int.Divisibility
@@ -59,9 +56,6 @@ private
     m + (m + m * m) ≡⟨ +-assoc m m (m * m) ⟩
     _ ∎
 
-  lemmaSquareDiff : ∀ a b → (a +ℤ b) *ℤ (a - b) ≡ (a *ℤ a) - (b *ℤ b) 
-  lemmaSquareDiff = solve ℤCommRing
-
   rearrangeSqr : ∀ {a b c} → a * b ≡ c → (a * a) * (b * b) ≡ c * c
   rearrangeSqr {a} {b} {c} prf =
     (a * a) * (b * b) ≡⟨ sym (·-assoc a a (b * b)) ⟩
@@ -71,6 +65,9 @@ private
     a * (b * c) ≡⟨ ·-assoc a b c ⟩
     (a * b) * c ≡⟨ cong (_* c) prf ⟩
     c * c ∎
+
+lemmaSquareDiff : ∀ a b → (a +ℤ b) *ℤ (a - b) ≡ (a *ℤ a) - (b *ℤ b) 
+lemmaSquareDiff = solve ℤCommRing
 
 _^ℤ_ : ℤ → ℕ → ℤ
 a ^ℤ zero = 1
@@ -281,42 +278,3 @@ squareCoprimeLemma' a b (m , sqrPrf) cpPrf =
     gcd (a * a) (b * a) ≡⟨ cong (gcd (a * a)) (sym sqrPrf) ⟩
     gcd (a * a) (m * m) ≡⟨ gcd² a m ⟩
     gcd a m * gcd a m ∎)
-
-data PythTriple : ℕ → ℕ → ℕ → Type where
-  PT : ∀ a b c {p} →
-       ((a * a) + (b * b) ≡ (c * c)) →
-       isGCD a b p → isGCD p c 1 →
-       ¬ (a ≡ 0) → ¬ (b ≡ 0) →
-       PythTriple a b c
-
-to+1 : (a : ℕ) → ¬ (a ≡ 0) → ℕ₊₁
-to+1 (suc n) _ = 1+ n
-to+1 zero prf = ⊥.rec (prf refl)
-
-PythTripleGen : ℕ → ℕ → ℕ → ℕ × ℕ → Type₀
-PythTripleGen a b c (m , n) =
-  (n < m) × (a ≡ m * m ∸ n * n) × (b ≡ 2 * m * n) × (c ≡ m * m + n * n)
-
-reduceToGenerator : ∀ {a b c} → PythTriple a b c → Σ (ℕ × ℕ) (PythTripleGen a b c)
-reduceToGenerator (PT a b c prf gcd1 gcd2 aNZ bNZ) =
-  let
-    lemma1 =
-      pos a *ℤ pos a +ℤ pos b *ℤ pos b ≡⟨ cong (_+ℤ pos b *ℤ pos b) (sym (pos·pos a a)) ⟩
-      pos (a * a) +ℤ pos b *ℤ pos b ≡⟨ cong (pos (a * a) +ℤ_) (sym (pos·pos b b)) ⟩
-      pos (a * a) +ℤ pos (b * b) ≡⟨ sym (pos+ (a * a) (b * b)) ⟩
-      pos (a * a + b * b) ≡⟨ cong pos prf ⟩
-      _ ∎
-    lemma2 = -- (b ^ 2) = (c + a)(c - a)
-      pos·pos b b
-      ∙ sym (plusMinus (pos a *ℤ pos a) (pos b *ℤ pos b))
-      ∙ sym (cong (_- pos a *ℤ pos a) (+Comm (pos a *ℤ pos a) (pos b *ℤ pos b)))
-      ∙ cong (_- pos a *ℤ pos a) lemma1
-      ∙ cong (_- pos a *ℤ pos a) (pos·pos c c)
-      ∙ sym (lemmaSquareDiff (pos c) (pos a))
-    bb = to+1 (b * b) (x²≠0 bNZ)
-  in
-    {!!}
-{-
-fermat4ℤ : (x y z : ℤ) → ¬ x ≡ 0 → ¬ y ≡ 0 → ¬ ((x ^ℤ 4) +ℤ (y ^ℤ 4) ≡ (z ^ℤ 4))
-fermat4ℤ x y z px py = {!!}
--}
