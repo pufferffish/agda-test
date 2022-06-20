@@ -14,6 +14,10 @@ open import Cubical.Foundations.Function
 open import Cubical.Data.Sigma
 open import Cubical.Foundations.Transport
 open import Cubical.Foundations.Prelude
+open import Cubical.Algebra.CommRing.Instances.QuoQ
+open import Cubical.Algebra.CommRing
+open import Cubical.Algebra.CommRing.Instances.Int
+open import Cubical.Algebra.CommRingSolver.Reflection
 open import Cubical.Data.Int.MoreInts.QuoInt as Z'
   using (ℤ→Int; Int→ℤ)
   renaming (_+_ to _+Z'_; _·_ to _*Z'_)
@@ -43,13 +47,54 @@ private
       (subst⁻ (λ x → [ Int→ℤ (pos (suc a)) / c ] ≡ [ (Int→ℤ (pos (suc a))) *Z' 1 / x ]) (·₊₁-identityʳ (to+1 (suc a) prf))
       (subst⁻ (λ x → [ Int→ℤ (pos (suc a)) / c ] ≡ [ x / c ]) (Z'.·-identityʳ (Int→ℤ (pos (suc a)))) refl))) ∙ (ℚ-cancelˡ c)
 
+  mIsPos : ∀ m → Z'.sign (Int→ℤ (pos m)) ≡ Z'.spos
+  mIsPos zero = refl
+  mIsPos (suc m) = refl
+
+  lemmaZ1' : ∀ a b → Int→ℤ (pos a *Z pos b) ≡ (Int→ℤ (pos a)) *Z' (Int→ℤ (pos b))
+  lemmaZ1' a b =
+    sym
+      (cong (λ x → Z'.signed (x Z'.·S (Z'.sign (Int→ℤ (pos b)))) (a * b)) (mIsPos a)
+      ∙ cong (λ x → Z'.signed (Z'.spos Z'.·S x) (a * b)) (mIsPos b)
+      ∙ cong Int→ℤ (pos·pos a b))
+
+  lemmaZ1'' : ∀ a b → Int→ℤ (pos (suc a) *Z negsuc b) ≡ (Int→ℤ (pos (suc a))) *Z' (Int→ℤ (negsuc b))
+  lemmaZ1'' a b =
+    cong Int→ℤ (pos·negsuc (suc a) b) ∙ cong (λ x → Int→ℤ (- x)) (sym (pos·pos (suc a) (suc b)))
+
+  lemmaZ1 : ∀ a b → Int→ℤ (a *Z b) ≡ (Int→ℤ a) *Z' (Int→ℤ b)
+  lemmaZ1 (pos a) (pos b) = lemmaZ1' a b
+  lemmaZ1 (negsuc a) (negsuc b) =
+    Int→ℤ (negsuc a *Z negsuc b) ≡⟨ cong Int→ℤ (negsuc·negsuc a b) ⟩
+    Int→ℤ (pos (suc a) *Z pos (suc b)) ≡⟨ lemmaZ1' (suc a) (suc b) ⟩
+    (Int→ℤ (negsuc a)) *Z' (Int→ℤ (negsuc b)) ∎
+  lemmaZ1 (pos zero) (negsuc _) = Z'.posneg
+  lemmaZ1 (negsuc a) (pos zero) =
+    Int→ℤ (negsuc a *Z 0) ≡⟨ cong Int→ℤ (·Comm (negsuc a) 0) ⟩
+    Z'.signed Z'.spos 0 ≡⟨ Z'.posneg ⟩
+    Z'.signed Z'.sneg 0 ≡⟨ cong (Z'.signed Z'.sneg) (0≡m·0 (suc a)) ⟩
+    Z'.signed Z'.sneg (suc a * 0) ≡⟨⟩
+    (Int→ℤ (negsuc a)) *Z' (Int→ℤ (pos zero)) ∎
+  lemmaZ1 (pos (suc a)) (negsuc b) = lemmaZ1'' a b
+  lemmaZ1 (negsuc a) (pos (suc b)) =
+    Int→ℤ (negsuc a *Z pos (suc b)) ≡⟨ cong Int→ℤ (·Comm (negsuc a) (pos (suc b))) ⟩
+    Int→ℤ (pos (suc b) *Z negsuc a) ≡⟨ lemmaZ1'' b a ⟩
+    (Int→ℤ (pos (suc b))) *Z' (Int→ℤ (negsuc a)) ≡⟨ Z'.·-comm (Int→ℤ (pos (suc b))) (Int→ℤ (negsuc a)) ⟩
+    _ ∎
+
+  -- lemmaQ1 : ∀ a b c d → [ a / b ] *Q [ c / d ] ≡ 1 → [ a / b ] ≡ [ d / c ]
+
 PythTripleGen : ℕ → ℕ → ℕ → ℕ × ℕ → Type₀
 PythTripleGen a b c (m , n) =
   (n < m) × (a ≡ m * m ∸ n * n) × (b ≡ 2 * m * n) × (c ≡ m * m + n * n)
 
 reduceToGenerator : ∀ {a b c} → PythTriple a b c → Σ (ℕ × ℕ) (PythTripleGen a b c)
-reduceToGenerator (PT a b c prf gcd1 gcd2 aNZ bNZ) =
+reduceToGenerator (PT a zero c prf gcd1 gcd2 aNZ bNZ) = ⊥.rec (bNZ refl)
+reduceToGenerator (PT zero b c prf gcd1 gcd2 aNZ bNZ) = ⊥.rec (aNZ refl)
+reduceToGenerator (PT (suc a') (suc b') c prf gcd1 gcd2 aNZ bNZ) =
   let
+    a = suc a'
+    b = suc b'
     lemma1 =
       pos a *Z pos a +Z pos b *Z pos b ≡⟨ cong (_+Z pos b *Z pos b) (sym (pos·pos a a)) ⟩
       pos (a * a) +Z pos b *Z pos b ≡⟨ cong (pos (a * a) +Z_) (sym (pos·pos b b)) ⟩
@@ -66,9 +111,9 @@ reduceToGenerator (PT a b c prf gcd1 gcd2 aNZ bNZ) =
       ∙ cong (_- pos a *Z pos a) lemma1
       ∙ cong (_- pos a *Z pos a) (pos·pos c c)
       ∙ sym (lemmaSquareDiff (pos c) (pos a))))
-    test =
-      [ Int→ℤ ((pos c +Z pos a) *Z (pos c - pos a)) / bb ] ≡⟨⟩
-      {!!}
+    lemma3 =
+      [ Int→ℤ ((pos c +Z pos a) *Z (pos c - pos a)) / bb ] ≡⟨ cong (λ x → [ x / bb ]) (lemmaZ1 (pos c +Z pos a) (pos c - pos a)) ⟩
+      [ (Int→ℤ (pos c +Z pos a)) / 1+ b' ] *Q [ (Int→ℤ (pos c - pos a)) / 1+ b' ] ∎
   in
     {!!}
 {-
