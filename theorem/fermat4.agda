@@ -92,16 +92,10 @@ private
     [ (ℕ₊₁→ℤ (b ·₊₁ a)) *Z' 1 / (b ·₊₁ a) ·₊₁ 1 ] ≡⟨ ℚ-cancelˡ (b ·₊₁ a) ⟩
     1 ∎
 
-  lemmaQ3 : ∀ a b c d → ¬ (a ≡ 0) → [ a / b ] *Q [ ℕ₊₁→ℤ c / d ] ≡ 1 → [ a / b ] ≡ [ ℕ₊₁→ℤ d / c ]
-  lemmaQ3 a b c d aNZ prf =
-    let
-      ab = [ a / b ]
-      b/a = hasInverseℚ ab λ { x → aNZ (a/b≡0→a≡0 (a , b) x) }
-      q =
-        1 ≡⟨ sym prf ⟩
-        [ a / b ] *Q [ ℕ₊₁→ℤ c / d ] ≡⟨⟩
-        {!!}
-    in {!!}
+  lemmaQ3 : ∀ {a b c d} → [ a / b ] *Q [ ℕ₊₁→ℤ c / d ] ≡ 1 → [ a / b ] ≡ [ ℕ₊₁→ℤ d / c ]
+  lemmaQ3 {a} {b} {c} {d} prf =
+    cong (λ (x , _) → x)
+    (Units.inverseUniqueness ℚCommRing [ ℕ₊₁→ℤ c / d ] ([ a / b ] , Q.·-comm [ ℕ₊₁→ℤ c / d ] [ a / b ] ∙ prf) ([ ℕ₊₁→ℤ d / c ] , lemmaQ2 c d))
 
 PythTripleGen : ℕ → ℕ → ℕ → ℕ × ℕ → Type₀
 PythTripleGen a b c (m , n) =
@@ -121,18 +115,26 @@ reduceToGenerator (PT (suc a') (suc b') c prf gcd1 gcd2 aNZ bNZ) =
       pos (a * a + b * b) ≡⟨ cong pos prf ⟩
       _ ∎
     bb = to+1 (b * b) (x²≠0 bNZ)
+    lemma2' =
+      Int→ℤ (pos c +Z pos a) ≡⟨⟩
+      Int→ℤ (pos c +Z pos a) ≡⟨ cong Int→ℤ (sym (pos+ c a)) ⟩
+      Z'.pos (c + suc a') ≡⟨ cong Z'.pos (+-suc c a') ⟩
+      Z'.pos (suc (c + a')) ≡⟨⟩
+      ℕ₊₁→ℤ (1+ (c + a')) ∎
     lemma2 =
-      the (1 ≡ [ Int→ℤ ((pos c +Z pos a) *Z (pos c - pos a)) / bb ])
-      (sym (lemmaQ1 (b * b) (x²≠0 bNZ)) ∙ cong (λ x → [ Int→ℤ x / bb ])
+      the ([ (Int→ℤ (pos c - pos a)) / 1+ b' ] *Q [ (Int→ℤ (pos c +Z pos a)) / 1+ b' ] ≡ 1)
+      ((Q.·-comm [ (Int→ℤ (pos c - pos a)) / 1+ b' ] [ (Int→ℤ (pos c +Z pos a)) / 1+ b' ]) ∙ sym
+      ((sym (lemmaQ1 (b * b) (x²≠0 bNZ)) ∙ cong (λ x → [ Int→ℤ x / bb ])
       (pos·pos b b
       ∙ sym (plusMinus (pos a *Z pos a) (pos b *Z pos b))
       ∙ sym (cong (_- pos a *Z pos a) (+Comm (pos a *Z pos a) (pos b *Z pos b)))
       ∙ cong (_- pos a *Z pos a) lemma1
       ∙ cong (_- pos a *Z pos a) (pos·pos c c)
-      ∙ sym (lemmaSquareDiff (pos c) (pos a))))
-    lemma3 =
-      [ Int→ℤ ((pos c +Z pos a) *Z (pos c - pos a)) / bb ] ≡⟨ cong (λ x → [ x / bb ]) (lemmaZ1 (pos c +Z pos a) (pos c - pos a)) ⟩
-      [ (Int→ℤ (pos c +Z pos a)) / 1+ b' ] *Q [ (Int→ℤ (pos c - pos a)) / 1+ b' ] ∎
+      ∙ sym (lemmaSquareDiff (pos c) (pos a)))
+      ∙ cong (λ x → [ x / bb ]) (lemmaZ1 (pos c +Z pos a) (pos c - pos a)))))
+    lemma4 =
+      lemmaQ3 {Int→ℤ (pos c - pos a)} {1+ b'}
+      (cong (λ x → [ (Int→ℤ (pos c - pos a)) / 1+ b' ] *Q [ x / 1+ b' ]) (sym lemma2') ∙ lemma2)
   in
     {!!}
 {-
