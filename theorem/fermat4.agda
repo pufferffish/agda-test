@@ -21,6 +21,8 @@ open import Cubical.Algebra.CommRingSolver.Reflection
 open import Cubical.Data.Int.MoreInts.QuoInt as Z'
   using (ℤ→Int; Int→ℤ)
   renaming (_+_ to _+Z'_; _·_ to _*Z'_)
+open import Cubical.Algebra.Field
+open import Cubical.Algebra.Field.Instances.QuoQ
 open import theorem.lemmas
 
 module theorem.fermat4 where
@@ -82,7 +84,24 @@ private
     (Int→ℤ (pos (suc b))) *Z' (Int→ℤ (negsuc a)) ≡⟨ Z'.·-comm (Int→ℤ (pos (suc b))) (Int→ℤ (negsuc a)) ⟩
     _ ∎
 
-  -- lemmaQ1 : ∀ a b c d → [ a / b ] *Q [ c / d ] ≡ 1 → [ a / b ] ≡ [ d / c ]
+  lemmaQ2 : ∀ a b → [ ℕ₊₁→ℤ a / b ] *Q [ ℕ₊₁→ℤ b / a ] ≡ 1
+  lemmaQ2 a b =
+    [ ℕ₊₁→ℤ (a ·₊₁ b) / b ·₊₁ a ] ≡⟨ cong (λ x → [ ℕ₊₁→ℤ x / b ·₊₁ a ]) (·₊₁-comm a b)⟩
+    [ (ℕ₊₁→ℤ (b ·₊₁ a)) / b ·₊₁ a ] ≡⟨ cong (λ x → [ x / b ·₊₁ a ]) (sym (Z'.·-identityʳ (ℕ₊₁→ℤ (b ·₊₁ a))))⟩
+    [ (ℕ₊₁→ℤ (b ·₊₁ a)) *Z' 1 / b ·₊₁ a ] ≡⟨ cong (λ x → [ (ℕ₊₁→ℤ (b ·₊₁ a)) *Z' 1 / x ]) (sym (·₊₁-identityʳ (b ·₊₁ a))) ⟩
+    [ (ℕ₊₁→ℤ (b ·₊₁ a)) *Z' 1 / (b ·₊₁ a) ·₊₁ 1 ] ≡⟨ ℚ-cancelˡ (b ·₊₁ a) ⟩
+    1 ∎
+
+  lemmaQ3 : ∀ a b c d → ¬ (a ≡ 0) → [ a / b ] *Q [ ℕ₊₁→ℤ c / d ] ≡ 1 → [ a / b ] ≡ [ ℕ₊₁→ℤ d / c ]
+  lemmaQ3 a b c d aNZ prf =
+    let
+      ab = [ a / b ]
+      b/a = hasInverseℚ ab λ { x → aNZ (a/b≡0→a≡0 (a , b) x) }
+      q =
+        1 ≡⟨ sym prf ⟩
+        [ a / b ] *Q [ ℕ₊₁→ℤ c / d ] ≡⟨⟩
+        {!!}
+    in {!!}
 
 PythTripleGen : ℕ → ℕ → ℕ → ℕ × ℕ → Type₀
 PythTripleGen a b c (m , n) =
