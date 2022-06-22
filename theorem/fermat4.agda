@@ -53,7 +53,7 @@ private
     Z'.predℤ (Z'.sucℤ ((Z'.pos n) +Z' (Z'.neg n))) ≡⟨ Z'.predSucℤ (Z'.pos n +Z' Z'.neg n) ⟩
     Z'.pos n +Z' Z'.neg n ≡⟨ lemmaQZCancel (Z'.pos n) ⟩
     Z'.pos zero ∎
-  lemmaQZCancel (Z'.posneg i) j = Z'.posneg (j)
+  lemmaQZCancel (Z'.posneg i) j = Z'.posneg (~ i ∧ ~ j)
 
 open CommRingStr using (0r ; 1r ; isCommRing) renaming (_+_ to _+r_; _·_ to _*r_; -_ to -r_)
 
@@ -151,6 +151,15 @@ private
   lemmaZ3 zero b = refl
   lemmaZ3 (suc a) b = cong Z'.sucℤ (lemmaZ3 a b)
 
+  lemmaZ4 : ∀ c a → (c +Z' a) +Z' (c +Z' (-Z' a)) ≡ c +Z' c
+  lemmaZ4 = solve QℤCommRing
+
+  lemmaZ5 : ∀ a → 2 *Z' a ≡ a +Z' a
+  lemmaZ5 a =
+    (1 +Z' 1) *Z' a ≡⟨ sym (Z'.·-distribʳ 1 1 a) ⟩
+    (1 *Z' a +Z' 1 *Z' a) ≡⟨ cong (λ x → x +Z' x) (Z'.·-identityˡ a) ⟩
+    a +Z' a ∎
+
 PythTripleGen : ℕ → ℕ → ℕ → ℕ × ℕ → Type₀
 PythTripleGen a b c (m , n) =
   (n < m) × (a ≡ m * m ∸ n * n) × (b ≡ 2 * m * n) × (c ≡ m * m + n * n)
@@ -196,9 +205,10 @@ reduceToGenerator (PT (suc a') (suc b') c prf gcd1 gcd2 aNZ bNZ) =
       [ (Z'.pos (suc (c + a'))) +Z' (Int→ℤ (pos c - pos a)) / 1+ b' ] ≡⟨ cong (λ x → [ (Z'.pos x) +Z' (Int→ℤ (pos c - pos a)) / 1+ b' ]) (sym (+-suc c a')) ⟩
       [ (Z'.pos (c + a)) +Z' (Int→ℤ (pos c - pos a)) / 1+ b' ] ≡⟨ cong (λ x → [ (Z'.pos (c + a)) +Z' x / 1+ b' ]) (sym (lemmaZ2 c a)) ⟩
       [ (Z'.pos (c + a)) +Z' ((Int→ℤ (pos c)) +Z' (-Z' (Int→ℤ (pos a)))) / 1+ b' ] ≡⟨ cong (λ x → [ x +Z' ((Int→ℤ (pos c)) +Z' (-Z' (Int→ℤ (pos a)))) / 1+ b' ]) (sym (lemmaZ3 c a)) ⟩
-      [ (Int→ℤ (pos c) +Z' Int→ℤ (pos a)) +Z' ((Int→ℤ (pos c)) +Z' (-Z' (Int→ℤ (pos a)))) / 1+ b' ] ≡⟨⟩
-      {!!}
-      -- 2 *Q [ Z'.pos c / 1+ b' ] ∎ 
+      [ (Int→ℤ (pos c) +Z' Int→ℤ (pos a)) +Z' ((Int→ℤ (pos c)) +Z' (-Z' (Int→ℤ (pos a)))) / 1+ b' ] ≡⟨ cong (λ x → [ x / 1+ b' ]) (lemmaZ4 (Int→ℤ (pos c)) (Int→ℤ (pos a))) ⟩
+      [ Int→ℤ (pos c) +Z' Int→ℤ (pos c) / 1+ b' ] ≡⟨ cong (λ x → [ x / 1+ b' ]) (sym (lemmaZ5 (Int→ℤ (pos c)))) ⟩
+      [ 2 *Z' Int→ℤ (pos c) / 1+ b' ] ≡⟨ cong (λ x → [ 2 *Z' Int→ℤ (pos c) / x ]) (sym (·₊₁-identityˡ (1+ b'))) ⟩
+      2 *Q [ Int→ℤ (pos c) / 1+ b' ] ∎
     2a/b =
       m/n -Q n/m ≡⟨ {!!} ⟩
       2 *Q [ Z'.pos a / 1+ b' ] ∎
