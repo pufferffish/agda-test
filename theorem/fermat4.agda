@@ -20,9 +20,10 @@ open import Cubical.Algebra.CommRing.Instances.Int
 open import Cubical.Algebra.CommRingSolver.Reflection
 open import Cubical.Data.Int.MoreInts.QuoInt as Z'
   using (ℤ→Int; Int→ℤ)
-  renaming (_+_ to _+Z'_; _·_ to _*Z'_)
+  renaming (_+_ to _+Z'_; _·_ to _*Z'_; -_ to -Z'_)
 open import Cubical.Algebra.Field
 open import Cubical.Algebra.Field.Instances.QuoQ
+open import Cubical.Data.Bool as Bool using (Bool; not; notnot)
 open import theorem.lemmas
 
 module theorem.fermat4 where
@@ -37,6 +38,36 @@ data PythTriple : ℕ → ℕ → ℕ → Type where
 to+1 : (a : ℕ) → ¬ (a ≡ 0) → ℕ₊₁
 to+1 (suc n) _ = 1+ n
 to+1 zero prf = ⊥.rec (prf refl)
+
+private
+  lemmaQZCancel : ∀ x → x +Z' (-Z' x) ≡ Z'.pos zero
+  lemmaQZCancel (Z'.signed Bool.false zero) = sym (Z'.posneg)
+  lemmaQZCancel (Z'.signed Bool.true zero) = refl
+  lemmaQZCancel (Z'.signed Bool.false (suc n)) =
+    Z'.sucℤ ((Z'.pos n) +Z' (Z'.neg (suc n))) ≡⟨ cong Z'.sucℤ (Z'.+-comm (Z'.pos n) (Z'.neg (suc n))) ⟩
+    Z'.sucℤ (Z'.predℤ ((Z'.neg n) +Z' (Z'.pos n))) ≡⟨ Z'.sucPredℤ ((Z'.neg n) +Z' (Z'.pos n)) ⟩
+    (Z'.neg n) +Z' (Z'.pos n) ≡⟨ lemmaQZCancel (Z'.neg n) ⟩
+    Z'.pos zero ∎
+  lemmaQZCancel (Z'.signed Bool.true (suc n)) =
+    Z'.predℤ ((Z'.neg n) +Z' (Z'.pos (suc n))) ≡⟨ cong Z'.predℤ (Z'.+-comm (Z'.neg n) (Z'.pos (suc n))) ⟩
+    Z'.predℤ (Z'.sucℤ ((Z'.pos n) +Z' (Z'.neg n))) ≡⟨ Z'.predSucℤ (Z'.pos n +Z' Z'.neg n) ⟩
+    Z'.pos n +Z' Z'.neg n ≡⟨ lemmaQZCancel (Z'.pos n) ⟩
+    Z'.pos zero ∎
+  lemmaQZCancel (Z'.posneg i) j = Z'.posneg (j)
+
+open CommRingStr using (0r ; 1r ; isCommRing) renaming (_+_ to _+r_; _·_ to _*r_; -_ to -r_)
+
+QℤCommRing : CommRing ℓ-zero
+fst QℤCommRing = Z'.ℤ
+0r (snd QℤCommRing) = 0
+1r (snd QℤCommRing) = 1
+_+r_ (snd QℤCommRing) = _+Z'_
+_*r_ (snd QℤCommRing) = _*Z'_
+-r snd QℤCommRing = -Z'_
+isCommRing (snd QℤCommRing) = isCommRingQℤ
+  where abstract
+  isCommRingQℤ : IsCommRing 0 1 _+Z'_ _*Z'_ (-Z'_)
+  isCommRingQℤ = makeIsCommRing Z'.isSetℤ Z'.+-assoc Z'.+-identityʳ lemmaQZCancel Z'.+-comm Z'.·-assoc Z'.·-identityʳ (λ x y z → sym (Z'.·-distribˡ x y z)) Z'.·-comm
 
 private
   lemmaQ1 : ∀ a → (prf : ¬ (a ≡ 0)) → [ Int→ℤ (pos a) / to+1 a prf ] ≡ 1
@@ -97,6 +128,29 @@ private
     cong (λ (x , _) → x)
     (Units.inverseUniqueness ℚCommRing [ ℕ₊₁→ℤ c / d ] ([ a / b ] , Q.·-comm [ ℕ₊₁→ℤ c / d ] [ a / b ] ∙ prf) ([ ℕ₊₁→ℤ d / c ] , lemmaQ2 c d))
 
+  lemmaQ4 : ∀ a b c → [ a / b ] +Q [ c / b ] ≡ [ a +Z' c / b ]
+  lemmaQ4 a b c =
+    [ (a *Z' ℕ₊₁→ℤ b) +Z' (c *Z' ℕ₊₁→ℤ b) / b ·₊₁ b ] ≡⟨ cong (λ x → [ x / b ·₊₁ b ]) (Z'.·-distribʳ a c (ℕ₊₁→ℤ b)) ⟩
+    [ (a +Z' c) *Z' ℕ₊₁→ℤ b / b ·₊₁ b ] ≡⟨ ℚ-cancelʳ b ⟩
+    [ a +Z' c / b ] ∎
+
+  lemmaZ2' : ∀ a b → pos a - pos b ≡ pos (suc a) - pos (suc b)
+  lemmaZ2' a b = sym (pos- a b) ∙ pos- (suc a) (suc b)
+
+  lemmaZ2 : ∀ a b → (Int→ℤ (pos a)) +Z' (-Z' (Int→ℤ (pos b))) ≡ Int→ℤ (pos a - pos b)
+  lemmaZ2 zero zero = sym Z'.posneg
+  lemmaZ2 zero (suc b) = cong Int→ℤ (pos0+ (negsuc b))
+  lemmaZ2 (suc a) zero = Z'.+-zeroʳ Z'.sneg (Z'.pos (suc a))
+  lemmaZ2 (suc a) (suc b) =
+    Z'.sucℤ ((Z'.pos a) +Z' (Z'.neg (suc b))) ≡⟨ Z'.sucℤ-+ʳ (Z'.pos a) (Z'.neg (suc b)) ⟩
+    (Z'.pos a) +Z' (Z'.neg b) ≡⟨ lemmaZ2 a b ⟩
+    Int→ℤ (pos a - pos b) ≡⟨ cong Int→ℤ (lemmaZ2' a b) ⟩
+    _ ∎
+
+  lemmaZ3 : ∀ a b → Int→ℤ (pos a) +Z' Int→ℤ (pos b) ≡ Z'.pos (a + b)
+  lemmaZ3 zero b = refl
+  lemmaZ3 (suc a) b = cong Z'.sucℤ (lemmaZ3 a b)
+
 PythTripleGen : ℕ → ℕ → ℕ → ℕ × ℕ → Type₀
 PythTripleGen a b c (m , n) =
   (n < m) × (a ≡ m * m ∸ n * n) × (b ≡ 2 * m * n) × (c ≡ m * m + n * n)
@@ -135,6 +189,19 @@ reduceToGenerator (PT (suc a') (suc b') c prf gcd1 gcd2 aNZ bNZ) =
     lemma4 =
       lemmaQ3 {Int→ℤ (pos c - pos a)} {1+ b'}
       (cong (λ x → [ (Int→ℤ (pos c - pos a)) / 1+ b' ] *Q [ x / 1+ b' ]) (sym lemma2') ∙ lemma2)
+    n/m = [ (Int→ℤ (pos c - pos a)) / 1+ b' ]
+    m/n = [ ℕ₊₁→ℤ (1+ (c + a')) / 1+ b' ]
+    2c/b =
+      m/n +Q n/m ≡⟨ lemmaQ4 (ℕ₊₁→ℤ (1+ (c + a'))) (1+ b') (Int→ℤ (pos c - pos a)) ⟩
+      [ (Z'.pos (suc (c + a'))) +Z' (Int→ℤ (pos c - pos a)) / 1+ b' ] ≡⟨ cong (λ x → [ (Z'.pos x) +Z' (Int→ℤ (pos c - pos a)) / 1+ b' ]) (sym (+-suc c a')) ⟩
+      [ (Z'.pos (c + a)) +Z' (Int→ℤ (pos c - pos a)) / 1+ b' ] ≡⟨ cong (λ x → [ (Z'.pos (c + a)) +Z' x / 1+ b' ]) (sym (lemmaZ2 c a)) ⟩
+      [ (Z'.pos (c + a)) +Z' ((Int→ℤ (pos c)) +Z' (-Z' (Int→ℤ (pos a)))) / 1+ b' ] ≡⟨ cong (λ x → [ x +Z' ((Int→ℤ (pos c)) +Z' (-Z' (Int→ℤ (pos a)))) / 1+ b' ]) (sym (lemmaZ3 c a)) ⟩
+      [ (Int→ℤ (pos c) +Z' Int→ℤ (pos a)) +Z' ((Int→ℤ (pos c)) +Z' (-Z' (Int→ℤ (pos a)))) / 1+ b' ] ≡⟨⟩
+      {!!}
+      -- 2 *Q [ Z'.pos c / 1+ b' ] ∎ 
+    2a/b =
+      m/n -Q n/m ≡⟨ {!!} ⟩
+      2 *Q [ Z'.pos a / 1+ b' ] ∎
   in
     {!!}
 {-
